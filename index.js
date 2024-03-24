@@ -1,5 +1,40 @@
 var express = require('express'); //import de la bibliothèque Express
 var app = express(); //instanciation d'une application Express
+var path = require('path');
+var multer = require('multer');
+
+// Set up multer for handling multipart/form-data (used for file uploads)
+var storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, 'uploads/') // The folder where uploaded images will be stored
+  },
+  filename: function(req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)) // Use the current timestamp as the filename
+  }
+});
+
+var upload = multer({ storage: storage });
+
+// Middleware to allow cross-origin resource sharing
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+// Handle image uploads
+app.post('/image/upload', upload.single('image'), function(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded.' });
+  }
+
+  // Image uploaded successfully, send back the URL
+  var imageUrl = 'http://' + req.headers.host + '/uploads/' + req.file.filename;
+  res.json({ imageUrl: imageUrl });
+});
+
+// Serve uploaded images
+app.use('/uploads', express.static('uploads'));
 
 // Pour s'assurer que l'on peut faire des appels AJAX au serveur
 app.use(function(req, res, next) {
@@ -12,7 +47,7 @@ app.use(function(req, res, next) {
 // On va mettre les "routes"  == les requêtes HTTP acceptéés par notre application.
 
 app.get("/", function(req, res) {
-  res.send("Hello " + req.url);
+  res.send("Hello" + req.url);
 });
 
 
@@ -66,10 +101,11 @@ app.get("/msg/get/*", function(req, res) {
   res.json({ "code": 0 });
 });
 
+
 // post
 app.get("/msg/post/*", function(req, res) {
-  const msg = unescape(req.url.substr(10));
-  allMsgs.push(msg);
+  const user_msg = unescape(req.url.substr(10));
+  allMsgs.push(user_msg);
   res.json(allMsgs.length - 1);
 });
 
@@ -97,5 +133,7 @@ app.get("/msg/del/*", function(req, res) {
   return res.json({ "code": 0 });
 });
 
+
 app.listen(8080); //commence à accepter les requêtes
 console.log("App listening on port 8080...");
+
